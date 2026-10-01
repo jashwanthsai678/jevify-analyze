@@ -1,0 +1,29 @@
+name: Bug report
+description: jevify crashed, rewrote something wrongly, or produced a misleading report
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include the command you ran and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: snippet
+    attributes:
+      label: Minimal code that reproduces it
+      description: The LLM call (and surrounding prompt code) as it appears in your source. Remove anything private.
+      render: python
+  - type: textarea
+    id: report
+    attributes:
+      label: Output of `jevify analyze` or the report
+      render: markdown
+  - type: input
+    id: version
+    attributes:
+      label: Versions
+      placeholder: "jevify 0.1.0, Python 3.13, Windows 11, openai 1.x"
+    validations:
+      required: true

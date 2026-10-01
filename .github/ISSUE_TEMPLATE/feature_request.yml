@@ -1,0 +1,16 @@
+name: Feature request
+description: Support another SDK, call style, language, or evidence source
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you want to be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: An example call site jevify should handle
+      description: The code as written today, and what you would want it to become.
+      render: python

@@ -1,0 +1,4 @@
+{"candidate": "jev_ec7e8bad", "state": {"text": "I was charged twice this month"}, "legacy": "billing", "expected": "billing"}
+{"candidate": "jev_ec7e8bad", "state": {"text": "The app crashes when I upload a photo"}, "legacy": "support", "expected": "support"}
+{"candidate": "jev_ec7e8bad", "state": {"text": "Please send me a copy of my last invoice"}, "legacy": "billing", "expected": "billing"}
+{"candidate": "jev_ec7e8bad", "state": {"text": "I can't reset my password"}, "legacy": "support", "expected": "support"}

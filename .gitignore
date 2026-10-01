@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# jevify working files
+tmp_sandbox/
+.jevify/
+.jevify_shadow.jsonl
+
+# local tooling
+.vscode/
+graphify-out/
