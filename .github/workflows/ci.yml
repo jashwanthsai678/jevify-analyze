@@ -13,7 +13,7 @@ jobs:
     name: Lint and type-check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
       - run: uv run --python 3.13 --extra dev --extra multilang ruff check src tests
       - run: uv run --python 3.13 --extra dev --extra multilang mypy src --ignore-missing-imports
@@ -27,7 +27,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "24"  # runs the generated TypeScript/JavaScript in tests
@@ -41,7 +41,7 @@ jobs:
     name: Test without optional parsers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
       - name: Python-only install still works; JS/TS/Go tests skip cleanly
         run: |
@@ -54,7 +54,7 @@ jobs:
     name: Detection benchmark gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
       - name: Tuning set (regression gate)
         run: uv run --python 3.13 jevvify bench --min-precision 0.95 --min-recall 0.90
@@ -67,7 +67,7 @@ jobs:
     name: Build and smoke-test the wheel
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
       - run: uv build
       - name: Wheel installs and the CLI runs
@@ -82,6 +82,6 @@ jobs:
     name: Docker image builds and runs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -t jevvify .
       - run: docker run --rm jevvify analyze /app/examples
