@@ -1,0 +1,4 @@
+{"candidate": "jev_859c753f", "state": {"message": "where is my package? ordered last tuesday"}, "legacy": "order_status", "expected": "order_status"}
+{"candidate": "jev_859c753f", "state": {"message": "the blender arrived broken, I want my money back"}, "legacy": "refund", "expected": "refund"}
+{"candidate": "jev_859c753f", "state": {"message": "does the X200 work with 220V?"}, "legacy": "product_question", "expected": "product_question"}
+{"candidate": "jev_e1f14c92", "state": {"message": "what's the weather in Paris"}, "legacy": "no", "expected": "no"}

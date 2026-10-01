@@ -9,6 +9,7 @@ from .translator import RUNTIME_SOURCE
 def load_runtime() -> ModuleType:
     """Import the bundled runtime file as a module (same code that ships into target projects)."""
     spec = importlib.util.spec_from_file_location("_jevvify_rt_bundled", RUNTIME_SOURCE)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

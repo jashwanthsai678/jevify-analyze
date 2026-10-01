@@ -5,27 +5,66 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   lint:
+    name: Lint and type-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv run --python 3.13 --with ruff ruff check src tests
+      - run: uv run --python 3.13 --extra dev --extra multilang ruff check src tests
+      - run: uv run --python 3.13 --extra dev --extra multilang mypy src --ignore-missing-imports
 
   test:
+    name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"  # runs the generated TypeScript/JavaScript in tests
       - uses: astral-sh/setup-uv@v5
-      - run: uv run --python ${{ matrix.python }} --with pytest python -m pytest -q
+      - name: Tests with coverage gate
+        run: >
+          uv run --python ${{ matrix.python }} --extra dev --extra multilang
+          python -m pytest -q --cov=jevvify --cov-report=term --cov-fail-under=85
+
+  test-minimal:
+    name: Test without optional parsers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Python-only install still works; JS/TS/Go tests skip cleanly
+        run: |
+          uv venv --python 3.11 /tmp/minimal
+          uv pip install --python /tmp/minimal -e . pytest
+          /tmp/minimal/bin/python -c "import importlib.util as u, sys; sys.exit(u.find_spec('tree_sitter') is not None)"
+          /tmp/minimal/bin/python -m pytest -q -rs
+
+  benchmark:
+    name: Detection benchmark gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Tuning set (regression gate)
+        run: uv run --python 3.13 jevvify bench --min-precision 0.95 --min-recall 0.90
+      - name: Held-out set (reported, not tuned on)
+        run: |
+          uv run --python 3.13 jevvify bench --dataset benchmarks/holdout.jsonl --min-precision 0.90 \
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
+    name: Build and smoke-test the wheel
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +73,15 @@ jobs:
       - name: Wheel installs and the CLI runs
         run: |
           uv venv --python 3.13 /tmp/smoke
-          uv pip install --python /tmp/smoke dist/*.whl
+          uv pip install --python /tmp/smoke "$(ls dist/*.whl)[multilang]"
           /tmp/smoke/bin/jevvify --version
-          /tmp/smoke/bin/jevvify analyze examples/ticket_router
+          /tmp/smoke/bin/jevvify analyze examples
+          /tmp/smoke/bin/jevvify bench
+
+  docker:
+    name: Docker image builds and runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t jevvify .
+      - run: docker run --rm jevvify analyze /app/examples

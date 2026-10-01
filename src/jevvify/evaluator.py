@@ -98,7 +98,7 @@ def load_shadow_log(path: Path, by_id: dict[str, Candidate]) -> list[Observation
             rec = json.loads(line)
         except ValueError:
             continue
-        cand = by_id.get(rec.get("id"))
+        cand = by_id.get(str(rec.get("id")))
         if cand is None:
             continue
         out.append(Observation(
@@ -134,7 +134,7 @@ def run_samples(
         legacy_fn = lambda c, state: state.get("__legacy__")  # replay of recorded output  # noqa: E731
 
     def one(pool: ThreadPoolExecutor, row: dict) -> Observation | None:
-        cand = by_id.get(row.get("candidate"))
+        cand = by_id.get(str(row.get("candidate")))
         if cand is None:
             return None
         state = row.get("state", {})

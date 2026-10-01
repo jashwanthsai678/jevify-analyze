@@ -12,7 +12,9 @@ Environment:
   JEVVIFY_MODEL / JEVVIFY_ENDPOINT / JEVVIFY_TIMEOUT  REST overrides (timeout default 10s)
   JEVVIFY_MODE       live (default) | shadow (run both, return legacy, log) | off (legacy only)
   JEVVIFY_THRESHOLD  overrides the generated threshold
-  JEVVIFY_LOG        shadow log path (default ./.jevvify_shadow.jsonl)
+  JEVVIFY_LOG        JSONL log path (default ./.jevvify_shadow.jsonl) for shadow decisions
+  JEVVIFY_LOG_LIVE=1 also log live-mode decisions (fallback rate, confidence, latency; no LLM call)
+  JEVVIFY_LOG_STATE=1 include the inputs sent to Jev in the log (off by default: they may hold user data)
 """
 
 from __future__ import annotations
@@ -200,17 +202,23 @@ def route(
     except Exception as exc:  # any Jev failure must degrade to the legacy path
         error = f"{type(exc).__name__}: {exc}"
     jev_ms = (time.perf_counter() - t0) * 1000
+    accepted = label is not None and conf >= thr
+    record: dict[str, Any] = {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "id": cid, "mode": mode, "kind": kind,
+        "options": options, "threshold": thr, "jev_label": label, "confidence": conf, "error": error,
+        "jev_ms": jev_ms, "decision": "error" if error else ("jev" if accepted else "fallback"),
+    }
+    if os.environ.get("JEVVIFY_LOG_STATE") == "1":
+        record["state"] = state
 
     if mode == "shadow":
         t1 = time.perf_counter()
         legacy = fallback()
-        _log({
-            "id": cid, "jev_label": label, "confidence": conf, "error": error, "jev_ms": jev_ms,
-            "legacy_ms": (time.perf_counter() - t1) * 1000, "legacy_text": _extract_text(legacy),
-            "state": state,
-        })
+        record.update(legacy_ms=(time.perf_counter() - t1) * 1000, legacy_text=_extract_text(legacy))
+        _log(record)
         return legacy
-
-    if label is not None and conf >= thr:
-        return _shim(shape, _text_for(label, options, kind, json_mode, json_key))
+    if os.environ.get("JEVVIFY_LOG_LIVE") == "1":
+        _log(record)
+    if accepted:
+        return _shim(shape, _text_for(label, options, kind, json_mode, json_key))  # type: ignore[arg-type]
     return fallback()

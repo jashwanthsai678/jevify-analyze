@@ -1,6 +1,6 @@
 ---
 name: jevvify
-description: "Audit a codebase for LLM calls that are really classification or yes/no decisions (routing, triage, intent, moderation, spam, sentiment, labelling, guardrails, 'is this X?' checks) and move them to TypeSafe Jev, keeping the original LLM call as a fallback. Python call sites are rewritten automatically by the bundled jevvify tool; other languages get hand-written Jev calls from bundled API templates. Use when the user wants to cut LLM cost or latency on decision-style calls, asks which LLM calls could move to Jev, or wants to call the Jev API. Not for generative calls (writing, summarizing, chat replies) or for choosing an LLM."
+description: "Audit a codebase for LLM calls that are really classification or yes/no decisions (routing, triage, intent, moderation, spam, sentiment, labelling, guardrails, 'is this X?' checks) and move them to TypeSafe Jev, keeping the original LLM call as a fallback. Python and JavaScript/TypeScript call sites are rewritten automatically by the bundled jevvify tool; Go is detected for manual rewrite, and other languages get hand-written Jev calls from bundled API templates. Use when the user wants to cut LLM cost or latency on decision-style calls, asks which LLM calls could move to Jev, or wants to call the Jev API. Not for generative calls (writing, summarizing, chat replies) or for choosing an LLM."
 trigger: /jevvify
 ---
 
@@ -22,7 +22,8 @@ user's own data.
 | `/jevvify`, `/jevvify <path>`, "which of my LLM calls could use Jev?" | Steps 1-5 (audit and dry run). Write nothing. |
 | `/jevvify <path> --apply`, or "go ahead" after a dry run | Step 6. If no dry run happened in this conversation, do steps 1-5 first. |
 | `/jevvify api`, "how do I call Jev?" | Read `reference/jev-api.md` and give the template for their language. |
-| A non-Python codebase | Steps 2-3 by reading the code yourself, then offer hand-written rewrites from `reference/jev-api.md`. Never claim the tool processed it. |
+| Go code, or a language the tool does not parse | Steps 2-3 by reading the code yourself (the tool lists Go decisions as `MANUAL`), then offer hand-written rewrites from `reference/jev-api.md`. Never claim the tool rewrote them. |
+| "is it working?" after deploying in shadow mode | Run `jevvify stats <log>` and explain agreement, fallback rate and the threshold sweep. |
 
 ## Running the tool
 
@@ -33,15 +34,21 @@ The tool is bundled in this skill folder and needs only Python 3.11+.
 3. If that Python is older than 3.11, try `py -3.13` (Windows) or `uv run --python 3.13 python ...`.
 4. If no Python 3.11+ exists, say so and continue with the manual review (steps 2-3) only. Never install Python yourself.
 
-Commands: `jevvify analyze <path> [--json]` lists call sites, and `jevvify run <path> [flags]` runs the full pipeline.
-Run `jevvify run --help` for every flag.
+Commands: `jevvify analyze <path> [--json]` lists call sites, `jevvify run <path> [flags]` runs the full pipeline,
+`jevvify stats <log>` summarises shadow logs. Run `jevvify <command> --help` for every flag.
+
+JavaScript/TypeScript and Go need the optional parsers. If `analyze` warns that files were not analyzed, tell the user
+to install the multilang extra (`uv tool install "jevvify[multilang] @ git+https://github.com/jashwanthsai678/jevify-analyze.git"`)
+and review those files by hand meanwhile.
 
 ## Workflow
 
 ### 1. Inventory
-Run `jevvify analyze <path>`. It reports each call to openai, anthropic, google-genai or langchain as `CANDIDATE`
-(a decision Jev can take) or `skip` with a reason. Generative prompts, streaming, tool calling, awaited calls and
-prompts with no per-call input are skipped on purpose.
+Run `jevvify analyze <path>`. It reports each call to openai, anthropic, google-genai, langchain or the Vercel AI SDK
+as `CANDIDATE` (a decision the tool can rewrite), `MANUAL` (a decision in Go), or `skip` with a reason. Each candidate
+has a confidence (low/medium/high) and `--json` lists the signals behind it; `jevvify run` only rewrites `medium` and up
+unless `--min-confidence low` is given. Generative prompts, streaming, tool calling, async Python calls and prompts
+with no per-call input are skipped on purpose.
 
 ### 2. Find what the analyzer missed
 The analyzer matches patterns, so it misses prompts built in helper functions, loaded from files or templates, or sent

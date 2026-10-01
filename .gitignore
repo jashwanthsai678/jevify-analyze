@@ -17,3 +17,6 @@ tmp_sandbox/
 # local tooling
 .vscode/
 graphify-out/
+.coverage
+coverage.xml
+htmlcov/

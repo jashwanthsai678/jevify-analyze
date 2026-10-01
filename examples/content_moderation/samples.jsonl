@@ -1,0 +1,5 @@
+{"candidate": "jev_97949af2", "state": {"post": "Anyone up for a ranked match tonight?"}, "legacy": "SAFE", "expected": "SAFE"}
+{"candidate": "jev_97949af2", "state": {"post": "I'm going to find where you live and hurt you"}, "legacy": "VIOLENCE", "expected": "VIOLENCE"}
+{"candidate": "jev_97949af2", "state": {"post": "Patch 2.1 nerfed the sniper again, devs pls"}, "legacy": "SAFE", "expected": "SAFE"}
+{"candidate": "jev_429e08ab", "state": {"label": "HATE", "post": "people from that server are all trash lol"}, "legacy": "yes", "expected": "yes"}
+{"candidate": "jev_429e08ab", "state": {"label": "SAFE", "post": "gg everyone, great tournament"}, "legacy": "no", "expected": "no"}

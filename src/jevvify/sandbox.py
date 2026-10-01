@@ -80,9 +80,11 @@ def _edit_pyproject(path: Path, text: str) -> str:
     return "added typesafe-sdk to pyproject.toml (uv add unavailable)"
 
 
-def merge_back(project: Path, sandbox: Path, changed: list[str], runtime_dirs: set[str],
-               dependency_files: list[str]) -> list[str]:
-    """Copy verified files into the project; originals are saved under .jevvify/backup/."""
+def merge_back(project: Path, sandbox: Path, changed: list[str], dependency_files: list[str]) -> list[str]:
+    """Copy verified files (rewritten sources and their runtime helpers) into the project.
+
+    Originals are saved under .jevvify/backup/.
+    """
     project, sandbox = Path(project).resolve(), Path(sandbox).resolve()
     backup = project / ".jevvify" / "backup"
     written: list[str] = []
@@ -98,7 +100,4 @@ def merge_back(project: Path, sandbox: Path, changed: list[str], runtime_dirs: s
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, dst)
         written.append(rel)
-    for d in sorted(runtime_dirs):
-        install_runtime(project / d)
-        written.append((Path(d) / RUNTIME_FILENAME).as_posix())
     return written

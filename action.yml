@@ -1,0 +1,48 @@
+name: jevvify audit
+description: Find LLM calls that are really classification or yes/no decisions and report which could ask TypeSafe Jev first.
+author: jashwanthsai678
+branding:
+  icon: search
+  color: blue
+
+inputs:
+  path:
+    description: Directory (relative to the workspace) to analyze.
+    required: false
+    default: "."
+  python-version:
+    description: Python version used to run jevvify.
+    required: false
+    default: "3.13"
+  fail-on-candidates:
+    description: Set to "true" to fail the step when any candidate call site is found.
+    required: false
+    default: "false"
+  version:
+    description: Git ref (branch, tag or commit) of jevvify to install.
+    required: false
+    default: "main"
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install jevvify
+      shell: bash
+      env:
+        JEVVIFY_REF: ${{ inputs.version }}
+        UV_PYTHON: ${{ inputs.python-version }}
+      run: uv tool install --python "$UV_PYTHON" "jevvify[multilang] @ git+https://github.com/jashwanthsai678/jevify-analyze.git@${JEVVIFY_REF}"
+    - name: Write report to the job summary
+      shell: bash
+      env:
+        JEVVIFY_PATH: ${{ inputs.path }}
+      run: jevvify analyze "$JEVVIFY_PATH" --format markdown >> "$GITHUB_STEP_SUMMARY"
+    - name: Fail on candidates
+      if: inputs.fail-on-candidates == 'true'
+      shell: bash
+      env:
+        JEVVIFY_PATH: ${{ inputs.path }}
+      run: jevvify analyze "$JEVVIFY_PATH" --fail-on-candidates

@@ -80,8 +80,9 @@ def test_skips_streaming_tools_and_async():
             client.chat.completions.create(model="m", stream=True, messages=[{"role": "user", "content": f"Is it ok? {t}"}])
             client.chat.completions.create(model="m", tools=[{}], messages=[{"role": "user", "content": f"Is it ok? {t}"}])
     ''')
-    assert [c.reason for c in cands] == ["async call (not rewritten)", "streaming call", "tool/function calling"]
+    assert [c.reason for c in cands] == ["async call (Python async rewrite is not supported yet)", "streaming call", "tool/function calling"]
     assert all(c.status == "skipped" for c in cands)
+    assert [c.reason_code for c in cands] == ["async", "streaming", "tool-calling"]
 
 
 def test_constant_prompt_without_input_is_skipped():

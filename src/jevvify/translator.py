@@ -16,6 +16,7 @@ from pathlib import Path
 
 from .fsutil import RUNTIME_FILENAME
 from .models import Candidate
+from .splice import indent_of, line_starts, offset
 
 IMPORT_NAME = "_jevvify_route"
 RUNTIME_SOURCE = Path(__file__).parent / "runtime_src" / "jevvify_rt.py"
@@ -40,19 +41,6 @@ def render_call(c: Candidate, original: str, threshold: float, indent: str = "")
     return f"{IMPORT_NAME}(\n{inner}" + f",\n{inner}".join(parts) + f",\n{indent})"
 
 
-def _line_starts(text: str) -> list[int]:
-    starts, pos = [0], 0
-    for line in text.split("\n"):
-        pos += len(line) + 1
-        starts.append(pos)
-    return starts
-
-
-def _offset(text: str, starts: list[int], lineno: int, byte_col: int) -> int:
-    line = text[starts[lineno - 1]: starts[lineno] - 1]
-    return starts[lineno - 1] + len(line.encode("utf-8")[:byte_col].decode("utf-8"))
-
-
 def _import_insert_line(tree: ast.Module) -> int:
     """1-based line after which the runtime import goes (0 = top of file)."""
     last = 0
@@ -73,17 +61,15 @@ def translate_source(source: str, candidates: list[Candidate], threshold: float,
     todo = sorted((c for c in candidates if c.status == "candidate"), key=lambda c: (c.line, c.col), reverse=True)
     if not todo:
         return source
-    starts = _line_starts(source)
+    starts = line_starts(source)
     out, floor = source, len(source) + 1
     applied = 0
     for c in todo:
-        begin = _offset(source, starts, c.line, c.col)
-        end = _offset(source, starts, c.end_line, c.end_col)
+        begin = offset(source, starts, c.line, c.col)
+        end = offset(source, starts, c.end_line, c.end_col)
         if end > floor:  # overlaps a call already rewritten after it; skip the outer one
             continue
-        line_start = starts[c.line - 1]
-        stripped = source[line_start:begin].lstrip(" \t")
-        indent = source[line_start:begin][: len(source[line_start:begin]) - len(stripped)]
+        indent = indent_of(source, starts, c.line)
         out = out[:begin] + render_call(c, source[begin:end], threshold, indent) + out[end:]
         floor = begin
         applied += 1

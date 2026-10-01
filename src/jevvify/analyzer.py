@@ -6,10 +6,12 @@ import ast
 import hashlib
 import re
 import string
+from collections.abc import Callable
 from pathlib import Path
 
-from .fsutil import iter_python_files, read_source
-from .models import Candidate
+from .classify import assess, build_instructions, classify_prompt, extract_options  # noqa: F401  (re-exported)
+from .fsutil import iter_source_files, read_source
+from .models import Candidate, level_for
 
 # ---------------------------------------------------------------------------
 # Call-site detection
@@ -132,7 +134,7 @@ class _PromptCollector:
         scope = self._enclosing_scope()
         scopes = [scope] if scope is self.tree else [scope, self.tree]
         for sc in scopes:
-            best = None
+            best: ast.Assign | ast.AnnAssign | None = None
             for n in ast.walk(sc):
                 if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name) \
                         and n.targets[0].id == name and n.lineno < self.call.lineno:
@@ -228,106 +230,16 @@ class _PromptCollector:
 
 
 # ---------------------------------------------------------------------------
-# Judgment-vs-generative classification
-# ---------------------------------------------------------------------------
-
-_GENERATIVE = re.compile(
-    r"\b(write|compose|draft|essay|story|poem|summari[sz]e|summary|explain|describe|translate|"
-    r"rewrite|paraphrase|brainstorm|generate|elaborate|expand|continue)\b", re.I)
-_NEGATED_GENERATIVE = re.compile(
-    r"\b(?:do not|don't|never|without|no)\s+(?:any\s+|extra\s+)?"
-    r"(?:explanations?|explain|summary|summari[sz]e|description|describe|extra text|commentary)\b", re.I)
-_LIST_INTRO = re.compile(
-    r"\b(?:one of|choose from|choose between|options?(?: are| include)?|categories(?: are)?|labels?(?: are)?|"
-    r"categori[sz]e (?:it |this |the |each )?(?:\w+ )?(?:as|into)|"
-    r"classify (?:it |this |the |each )?(?:\w+ )?(?:as|into)|"
-    r"route (?:it |this |the )?(?:\w+ )?to|either)\b[: \t\-]*",
-    re.I)
-_BOOL_PAIR = re.compile(r"\b(true\s*(?:/|or)\s*false|yes\s*(?:/|or)\s*no)\b", re.I)
-_BOOL_QUESTION = re.compile(
-    r"(?:^|[.\n:]\s*)(is|are|does|do|did|should|can|could|has|have|was|were|will|would)\b[^?\n]{3,300}\?", re.I)
-_RESPONSE_FORMAT_SENTENCE = re.compile(
-    r"\b(respond|reply|return|output|answer with|json|format|only the|nothing else)\b", re.I)
-_OPTION_TOKEN = re.compile(r"[A-Za-z][\w\- ]{0,29}")
-
-
-def _split_options(rest: str) -> list[str] | None:
-    rest = re.sub(r"^(?:one of|either|the following|[:\s])+", "", rest.strip(), flags=re.I)
-    rest = re.split(r"[:`\n]", rest, maxsplit=1)[0]
-    m = re.search(r"\.(?:\s|$)", rest)
-    if m:
-        rest = rest[: m.start()]
-    rest = re.sub(r"\(.*?\)", "", rest)
-    tokens = re.split(r"\s*,\s*(?:or\s+|and\s+)?|\s+or\s+|\s*/\s*|\s*\|\s*", rest)
-    options: list[str] = []
-    for tok in tokens:
-        tok = tok.strip().strip("`'\"[]{}() .")
-        if not tok:
-            continue
-        if not _OPTION_TOKEN.fullmatch(tok) or len(tok.split()) > 3:
-            return None
-        if tok not in options:
-            options.append(tok)
-    return options if len(options) >= 2 else None
-
-
-def _bullet_options(text: str, start: int) -> list[str] | None:
-    options: list[str] = []
-    for line in text[start:].split("\n")[1:]:
-        m = re.match(r"\s*(?:[-*•]|\d+[.)])\s*[`'\"]?([A-Za-z][\w\- ]{0,29}?)[`'\"]?\s*(?:[:–-].*)?$", line)
-        if not m:
-            if options:
-                break
-            continue
-        options.append(m.group(1).strip())
-    return options if len(options) >= 2 else None
-
-
-def extract_options(text: str) -> list[str] | None:
-    for m in _LIST_INTRO.finditer(text):
-        line_end = text.find("\n", m.end())
-        rest = text[m.end(): line_end if line_end != -1 else len(text)]
-        opts = _split_options(rest) if rest.strip() else _bullet_options(text, m.start())
-        if opts:
-            return opts
-    return None
-
-
-def classify_prompt(text: str) -> tuple[str | None, list[str], str]:
-    """Return (kind, options, reason). ``kind`` is None when the prompt is not a judgment task."""
-    cleaned = _NEGATED_GENERATIVE.sub("", text)
-    gen = _GENERATIVE.search(cleaned)
-    if gen:
-        return None, [], f"generative prompt (matched '{gen.group(0).lower()}')"
-    options = extract_options(text)
-    if options:
-        lowered = {o.lower() for o in options}
-        if lowered == {"true", "false"}:
-            return "noul", ["true", "false"], "true/false question"
-        if lowered == {"yes", "no"}:
-            return "noul", ["yes", "no"], "yes/no question"
-        return "choice", options, f"classification over {len(options)} labels"
-    pair = _BOOL_PAIR.search(text)
-    if pair:
-        pos = "true" if pair.group(1).lower().startswith("true") else "yes"
-        return "noul", [pos, "false" if pos == "true" else "no"], "boolean question"
-    if _BOOL_QUESTION.search(text):
-        return "noul", ["true", "false"], "boolean question"
-    return None, [], "no discrete label space found (not a judgment task)"
-
-
-def build_instructions(text: str) -> str:
-    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", text) if s.strip()]
-    kept = [s for s in sentences if not _RESPONSE_FORMAT_SENTENCE.search(s)]
-    return " ".join(kept or sentences)
-
-
-# ---------------------------------------------------------------------------
 # Per-file analysis
 # ---------------------------------------------------------------------------
 
 def _candidate_id(file: str, node: ast.Call) -> str:
-    return "jev_" + hashlib.sha1(f"{file}:{node.lineno}:{node.col_offset}".encode()).hexdigest()[:8]
+    return candidate_id(file, node.lineno, node.col_offset)
+
+
+def candidate_id(file: str, line: int, col: int) -> str:
+    """Stable id for a call site; shared by every language analyzer."""
+    return "jev_" + hashlib.sha1(f"{file}:{line}:{col}".encode()).hexdigest()[:8]
 
 
 def _truthy_kw(call: ast.Call, name: str) -> bool:
@@ -337,7 +249,40 @@ def _truthy_kw(call: ast.Call, name: str) -> bool:
     return False
 
 
+def _number_kw(call: ast.Call, *names: str) -> float | None:
+    for kw in call.keywords:
+        if kw.arg in names and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, (int, float)) \
+                and not isinstance(kw.value.value, bool):
+            return float(kw.value.value)
+    return None
+
+
+def _labels_used_downstream(call: ast.Call, parents: dict[ast.AST, ast.AST], tree: ast.Module,
+                            options: list[str]) -> bool:
+    """True if code after the call compares something with the label strings (==, in, dict keys, match)."""
+    wanted = {o.lower() for o in options}
+    scope: ast.AST | None = parents.get(call)
+    while scope is not None and not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        scope = parents.get(scope)
+    for node in ast.walk(scope or tree):
+        if getattr(node, "lineno", 0) < call.lineno:
+            continue
+        consts: list[ast.AST] = []
+        if isinstance(node, ast.Compare):
+            consts = [node.left, *node.comparators]
+            consts += [e for c in node.comparators if isinstance(c, (ast.Tuple, ast.List, ast.Set)) for e in c.elts]
+        elif isinstance(node, ast.Dict):
+            consts = [k for k in node.keys if k is not None]
+        elif isinstance(node, ast.MatchValue):
+            consts = [node.value]
+        for c in consts:
+            if isinstance(c, ast.Constant) and isinstance(c.value, str) and c.value.strip().lower() in wanted:
+                return True
+    return False
+
+
 def analyze_source(source: str, relpath: str) -> list[Candidate]:
+    """Analyze one Python file."""
     try:
         tree = ast.parse(source)
     except SyntaxError:
@@ -366,15 +311,15 @@ def _build(node: ast.Call, provider: str, source: str, tree: ast.Module,
         col=node.col_offset, end_col=node.end_col_offset or node.col_offset, provider=provider,
     )
 
-    def skip(reason: str, **extra) -> Candidate:
-        return Candidate(**base, status="skipped", reason=reason, **extra)
+    def skip(code: str, reason: str) -> Candidate:
+        return Candidate(**base, status="skipped", reason=reason, reason_code=code)  # type: ignore[arg-type]
 
     if isinstance(parents.get(node), ast.Await) or _chain(node.func)[-1:] == ["ainvoke"]:
-        return skip("async call (not rewritten)")
+        return skip("async", "async call (Python async rewrite is not supported yet)")
     if _truthy_kw(node, "stream"):
-        return skip("streaming call")
+        return skip("streaming", "streaming call")
     if any(kw.arg in {"tools", "functions", "tool_choice"} for kw in node.keywords):
-        return skip("tool/function calling")
+        return skip("tool-calling", "tool/function calling")
 
     collector = _PromptCollector(tree, parents, node)
     kwargs = {kw.arg: kw.value for kw in node.keywords if kw.arg}
@@ -385,32 +330,72 @@ def _build(node: ast.Call, provider: str, source: str, tree: ast.Module,
         collector.add(node.args[0])
     prompt = "\n".join(p for p in collector.parts if p.strip())
     if not prompt:
-        return skip("no prompt text found")
+        return skip("no-prompt", "no prompt text found")
 
     json_mode = bool(re.search(
         r"response_format|json_schema|json_object|response_mime_type|response_schema|with_structured_output", segment))
-    kind, options, why = classify_prompt(prompt)
-    if kind is None:
-        return skip(why, prompt=prompt, json_mode=json_mode)
-    if not collector.variables:
-        return skip("prompt has no dynamic input to classify", prompt=prompt, json_mode=json_mode)
-
-    key_match = re.search(r'"(\w+)"\s*:', prompt)
-    reason = why + (" + structured output requested" if json_mode else "")
-    return Candidate(
-        **base, status="candidate", reason=reason, kind=kind, options=options,
-        instructions=build_instructions(prompt), prompt=prompt, variables=dict(collector.variables),
-        json_mode=json_mode, json_key=key_match.group(1) if (json_mode and key_match) else None,
+    max_tokens = _number_kw(node, "max_tokens", "max_completion_tokens", "max_output_tokens")
+    return finish_candidate(
+        base, prompt=prompt, variables=collector.variables, json_mode=json_mode, language="python",
+        max_tokens=int(max_tokens) if max_tokens is not None else None,
+        temperature=_number_kw(node, "temperature"),
+        downstream=lambda options: _labels_used_downstream(node, parents, tree, options),
     )
 
 
-def analyze_project(root: Path, exclude: tuple[Path, ...] = ()) -> list[Candidate]:
+def finish_candidate(base: dict, *, prompt: str, variables: dict[str, str], json_mode: bool, language: str,
+                     max_tokens: int | None = None, temperature: float | None = None,
+                     downstream: Callable[[list[str]], bool] | None = None,
+                     rewritable: bool = True, manual_reason: str = "") -> Candidate:
+    """Shared tail of every language analyzer: classify the prompt text, score it, build the Candidate."""
+    kind, options, why = classify_prompt(prompt)
+    if kind is None:
+        code = "generative" if why.startswith("generative") else "no-label-space"
+        return Candidate(**base, status="skipped", reason=why, reason_code=code, prompt=prompt,
+                         json_mode=json_mode, language=language)
+    if not variables:
+        return Candidate(**base, status="skipped", reason="prompt has no dynamic input to classify",
+                         reason_code="no-dynamic-input", prompt=prompt, json_mode=json_mode, language=language)
+    used = bool(downstream(options)) if downstream else False
+    confidence, signals = assess(prompt, kind, options, why, max_tokens=max_tokens, temperature=temperature,
+                                 labels_used_downstream=used, json_mode=json_mode)
+    key_match = re.search(r'"(\w+)"\s*:', prompt)
+    reason = why + (" + structured output requested" if json_mode else "")
+    if not rewritable:
+        reason += f" ({manual_reason})" if manual_reason else " (manual rewrite)"
+    return Candidate(
+        **base, status="candidate", reason=reason, reason_code="judgment", kind=kind, options=options,
+        instructions=build_instructions(prompt), prompt=prompt, variables=dict(variables),
+        json_mode=json_mode, json_key=key_match.group(1) if (json_mode and key_match) else None,
+        language=language, confidence=confidence, level=level_for(confidence), signals=signals,
+        rewritable=rewritable,
+    )
+
+
+def analyze_project(root: Path, exclude: tuple[Path, ...] = (), warnings: list[str] | None = None) -> list[Candidate]:
+    """Analyze every supported source file under ``root``.
+
+    Files whose language adapter is unavailable (e.g. tree-sitter not installed) are counted in ``warnings``.
+    """
+    from .languages import adapter_for
+
     root = Path(root).resolve()
     out: list[Candidate] = []
-    for path in iter_python_files(root, exclude):
+    missing: dict[str, int] = {}
+    for path in iter_source_files(root, exclude):
+        adapter = adapter_for(path)
+        if adapter is None:
+            continue
+        if not adapter.available():
+            missing[adapter.name] = missing.get(adapter.name, 0) + 1
+            continue
         try:
             source, _ = read_source(path)
         except (OSError, UnicodeDecodeError):
             continue
-        out.extend(analyze_source(source, path.relative_to(root).as_posix()))
+        out.extend(adapter.analyze(source, path.relative_to(root).as_posix()))
+    if warnings is not None:
+        for name, count in sorted(missing.items()):
+            warnings.append(f"{count} {name} file(s) not analyzed: install the multilang extra "
+                            f"(`pip install \"jevvify[multilang]\"`)")
     return out

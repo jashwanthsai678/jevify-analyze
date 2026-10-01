@@ -1,0 +1,3 @@
+{"candidate": "jev_3e19423a", "state": {"transaction_json": "{\"amount\": 12.40, \"country\": \"US\", \"card_present\": true, \"merchant\": \"coffee\"}"}, "legacy": "low", "expected": "low"}
+{"candidate": "jev_3e19423a", "state": {"transaction_json": "{\"amount\": 2400, \"country\": \"RO\", \"card_present\": false, \"new_device\": true, \"merchant\": \"electronics\"}"}, "legacy": "high", "expected": "high"}
+{"candidate": "jev_3e19423a", "state": {"transaction_json": "{\"amount\": 310, \"country\": \"US\", \"card_present\": false, \"merchant\": \"travel\"}"}, "legacy": "medium", "expected": "medium"}
