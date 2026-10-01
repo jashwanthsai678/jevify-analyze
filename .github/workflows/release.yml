@@ -15,7 +15,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - name: Tests
         run: uv run --python 3.13 --extra dev --extra multilang python -m pytest -q
       - name: Build sdist and wheel
