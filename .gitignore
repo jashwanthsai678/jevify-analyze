@@ -9,10 +9,10 @@ build/
 .ruff_cache/
 .mypy_cache/
 
-# jevify working files
+# jevvify working files
 tmp_sandbox/
-.jevify/
-.jevify_shadow.jsonl
+.jevvify/
+.jevvify_shadow.jsonl
 
 # local tooling
 .vscode/

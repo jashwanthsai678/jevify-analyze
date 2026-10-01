@@ -1,5 +1,5 @@
 name: Bug report
-description: jevify crashed, rewrote something wrongly, or produced a misleading report
+description: jevvify crashed, rewrote something wrongly, or produced a misleading report
 labels: [bug]
 body:
   - type: textarea
@@ -18,12 +18,12 @@ body:
   - type: textarea
     id: report
     attributes:
-      label: Output of `jevify analyze` or the report
+      label: Output of `jevvify analyze` or the report
       render: markdown
   - type: input
     id: version
     attributes:
       label: Versions
-      placeholder: "jevify 0.1.0, Python 3.13, Windows 11, openai 1.x"
+      placeholder: "jevvify 0.1.0, Python 3.13, Windows 11, openai 1.x"
     validations:
       required: true

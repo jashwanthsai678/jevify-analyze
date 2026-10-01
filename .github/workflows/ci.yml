@@ -35,5 +35,5 @@ jobs:
         run: |
           uv venv --python 3.13 /tmp/smoke
           uv pip install --python /tmp/smoke dist/*.whl
-          /tmp/smoke/bin/jevify --version
-          /tmp/smoke/bin/jevify analyze examples/ticket_router
+          /tmp/smoke/bin/jevvify --version
+          /tmp/smoke/bin/jevvify analyze examples/ticket_router

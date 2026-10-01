@@ -17,7 +17,7 @@ from .sandbox import create_sandbox, inject_dependency, install_runtime, merge_b
 from .translator import translate_source
 
 DEPENDENCY_FILES = ["pyproject.toml", "uv.lock", "requirements.txt"]
-SHADOW_LOG = ".jevify_shadow.jsonl"
+SHADOW_LOG = ".jevvify_shadow.jsonl"
 
 
 @dataclass
@@ -64,8 +64,8 @@ def run(opts: Options) -> RunResult:
 
     # Phase 2
     sandbox = create_sandbox(project, opts.sandbox_dir)
-    (sandbox / ".jevify").mkdir(exist_ok=True)
-    (sandbox / ".jevify" / "candidates.json").write_text(
+    (sandbox / ".jevvify").mkdir(exist_ok=True)
+    (sandbox / ".jevvify" / "candidates.json").write_text(
         json.dumps([c.to_dict() for c in candidates], indent=2), encoding="utf-8")
     if judged:
         notes.append(inject_dependency(sandbox, opts.use_uv))
@@ -97,8 +97,8 @@ def run(opts: Options) -> RunResult:
     if live:
         log = sandbox / SHADOW_LOG
         if opts.test_cmd:
-            env = {**os.environ, "JEVIFY_MODE": "shadow", "JEVIFY_LOG": str(log),
-                   "JEVIFY_THRESHOLD": str(opts.threshold)}
+            env = {**os.environ, "JEVVIFY_MODE": "shadow", "JEVVIFY_LOG": str(log),
+                   "JEVVIFY_THRESHOLD": str(opts.threshold)}
             ok, tail = evaluator.run_test_command(opts.test_cmd, sandbox, env)
             if not ok:
                 for c in live:
@@ -137,8 +137,8 @@ def run(opts: Options) -> RunResult:
     if promoted and not opts.dry_run:
         runtime_dirs = {Path(rel).parent.as_posix() for rel in changed}
         written = merge_back(project, sandbox, changed, runtime_dirs, DEPENDENCY_FILES)
-        (project / ".jevify").mkdir(exist_ok=True)
-        (project / ".jevify" / "candidates.json").write_text(
+        (project / ".jevvify").mkdir(exist_ok=True)
+        (project / ".jevvify" / "candidates.json").write_text(
             json.dumps([c.to_dict() for c in candidates], indent=2), encoding="utf-8")
 
     if opts.sandbox_dir is None and not opts.keep_sandbox:

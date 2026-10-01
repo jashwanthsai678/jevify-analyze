@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from jevify.analyzer import analyze_project
+from jevvify.analyzer import analyze_project
 
 EXAMPLE = Path(__file__).parent.parent / "examples" / "ticket_router"
 

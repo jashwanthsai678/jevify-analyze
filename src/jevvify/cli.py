@@ -13,16 +13,16 @@ from .report import Assumptions
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="jevify", description="Move judgment-style LLM calls onto TypeSafe Jev.")
-    p.add_argument("--version", action="version", version=f"jevify {__version__}")
+    p = argparse.ArgumentParser(prog="jevvify", description="Move judgment-style LLM calls onto TypeSafe Jev.")
+    p.add_argument("--version", action="version", version=f"jevvify {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
     a = sub.add_parser("analyze", help="Phase 1 only: list LLM call sites and which are judgment tasks.")
     a.add_argument("path", type=Path, nargs="?", default=Path("."))
     a.add_argument("--json", action="store_true", help="emit machine-readable JSON")
 
-    for name, text in (("install", "Install the /jevify skill for Claude Code."),
-                       ("uninstall", "Remove the /jevify skill.")):
+    for name, text in (("install", "Install the /jevvify skill for Claude Code."),
+                       ("uninstall", "Remove the /jevvify skill.")):
         s = sub.add_parser(name, help=text)
         s.add_argument("--skills-dir", type=Path, default=None, help="default: ~/.claude/skills")
 
@@ -32,7 +32,7 @@ def _build_parser() -> argparse.ArgumentParser:
     r.add_argument("--sandbox-dir", type=Path, default=None, help="sandbox location (default: temp dir)")
     r.add_argument("--dry-run", action="store_true", help="do everything except writing to the project")
     r.add_argument("--samples", type=Path, help="JSONL of recorded inputs/outputs to replay (needs TYPESAFE_API_KEY)")
-    r.add_argument("--test-cmd", help="run in the sandbox with JEVIFY_MODE=shadow, e.g. 'uv run pytest -q'")
+    r.add_argument("--test-cmd", help="run in the sandbox with JEVVIFY_MODE=shadow, e.g. 'uv run pytest -q'")
     r.add_argument("--max-error-rate", type=float, default=0.05, help="block a call site above this disagreement rate")
     r.add_argument("--min-samples", type=int, default=1, help="scored answers needed before a call site can pass")
     r.add_argument("--require-evidence", action="store_true", help="block call sites with no shadow evidence")
@@ -83,7 +83,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
 
 def _cmd_install(args: argparse.Namespace) -> int:
-    print(f"installed skill: {install_skill(args.skills_dir)}\nUse it in Claude Code with /jevify")
+    print(f"installed skill: {install_skill(args.skills_dir)}\nUse it in Claude Code with /jevvify")
     return 0
 
 

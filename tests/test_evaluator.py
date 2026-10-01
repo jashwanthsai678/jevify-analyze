@@ -1,8 +1,8 @@
 import json
 import threading
 
-from jevify.evaluator import Observation, evaluate, load_shadow_log, normalize_label, run_samples
-from jevify.models import Candidate
+from jevvify.evaluator import Observation, evaluate, load_shadow_log, normalize_label, run_samples
+from jevvify.models import Candidate
 
 
 def cand(cid="jev_1", kind="choice", options=("spam", "ham")):

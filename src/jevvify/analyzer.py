@@ -81,7 +81,7 @@ def _match_provider(call: ast.Call, providers: set[str]) -> str | None:
 def _is_jevified(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:
     cur = parents.get(node)
     while cur is not None:
-        if isinstance(cur, ast.Call) and isinstance(cur.func, ast.Name) and cur.func.id == "_jevify_route":
+        if isinstance(cur, ast.Call) and isinstance(cur.func, ast.Name) and cur.func.id == "_jevvify_route":
             return True
         cur = parents.get(cur)
     return False

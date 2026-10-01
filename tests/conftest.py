@@ -43,8 +43,8 @@ def fake_jev(monkeypatch):
     mod = types.ModuleType("typesafe_sdk")
     mod.Choice, mod.Noul, mod.TypeSafeClient = FakeJev.Choice, FakeJev.Noul, FakeJev.TypeSafeClient
     monkeypatch.setitem(sys.modules, "typesafe_sdk", mod)
-    monkeypatch.delenv("JEVIFY_MODE", raising=False)
-    monkeypatch.delenv("JEVIFY_THRESHOLD", raising=False)
+    monkeypatch.delenv("JEVVIFY_MODE", raising=False)
+    monkeypatch.delenv("JEVVIFY_THRESHOLD", raising=False)
     return FakeJev
 
 

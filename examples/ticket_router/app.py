@@ -18,7 +18,7 @@ def route_ticket(text: str) -> str:
 
 
 def draft_reply(text: str) -> str:
-    """Generative: jevify leaves this alone."""
+    """Generative: jevvify leaves this alone."""
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": f"Write a friendly reply to this ticket: {text}"}],

@@ -1,7 +1,7 @@
 """Phase 3: shadow evaluation of Jev against the legacy LLM, and the promotion gate.
 
 Evidence comes from two places, both optional:
-  * a shadow log written by the runtime while the project's tests run with JEVIFY_MODE=shadow
+  * a shadow log written by the runtime while the project's tests run with JEVVIFY_MODE=shadow
   * a samples file (JSONL) replayed here, running the legacy and Jev functions concurrently:
       {"candidate": "jev_ab12cd34", "state": {...}, "legacy": "spam", "expected": "spam"}
     ``legacy`` is a recorded output of the old LLM call; ``expected`` is optional ground truth.

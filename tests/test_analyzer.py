@@ -1,6 +1,6 @@
 import textwrap
 
-from jevify.analyzer import analyze_source, classify_prompt, extract_options
+from jevvify.analyzer import analyze_source, classify_prompt, extract_options
 
 
 def analyze(src: str):
@@ -114,9 +114,9 @@ def test_langchain_invoke_and_format():
 def test_already_rewritten_calls_are_ignored():
     assert analyze('''
         import openai
-        from _jevify_rt import route as _jevify_route
+        from _jevvify_rt import route as _jevvify_route
         def f(client, t):
-            return _jevify_route("jev_1", {"t": t}, lambda: client.chat.completions.create(
+            return _jevvify_route("jev_1", {"t": t}, lambda: client.chat.completions.create(
                 messages=[{"role": "user", "content": f"Is {t} ok?"}]), kind="noul", instructions="", options=[], shape="openai")
     ''') == []
 

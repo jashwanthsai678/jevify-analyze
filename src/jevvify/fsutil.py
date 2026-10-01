@@ -5,9 +5,9 @@ from pathlib import Path
 
 EXCLUDED_DIRS = {
     ".git", ".hg", ".venv", "venv", "env", "node_modules", "__pycache__", ".tox",
-    ".mypy_cache", ".pytest_cache", ".ruff_cache", ".jevify", "build", "dist", "site-packages",
+    ".mypy_cache", ".pytest_cache", ".ruff_cache", ".jevvify", "build", "dist", "site-packages",
 }
-RUNTIME_FILENAME = "_jevify_rt.py"
+RUNTIME_FILENAME = "_jevvify_rt.py"
 
 
 def iter_python_files(root: Path, exclude: tuple[Path, ...] = ()):

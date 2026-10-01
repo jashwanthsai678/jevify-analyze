@@ -1,17 +1,17 @@
 import subprocess
 import sys
 
-from jevify.cli import main
+from jevvify.cli import main
 
 
 def test_install_and_uninstall_skill(tmp_path, capsys):
     assert main(["install", "--skills-dir", str(tmp_path)]) == 0
-    folder = tmp_path / "jevify"
+    folder = tmp_path / "jevvify"
     text = (folder / "SKILL.md").read_text(encoding="utf-8")
-    assert text.startswith("---\nname: jevify\n") and "trigger: /jevify" in text
-    assert (folder / "lib" / "jevify" / "cli.py").exists()
-    assert (folder / "lib" / "jevify" / "runtime_src" / "jevify_rt.py").exists()
-    assert not (folder / "lib" / "jevify" / "skill").exists()
+    assert text.startswith("---\nname: jevvify\n") and "trigger: /jevvify" in text
+    assert (folder / "lib" / "jevvify" / "cli.py").exists()
+    assert (folder / "lib" / "jevvify" / "runtime_src" / "jevvify_rt.py").exists()
+    assert not (folder / "lib" / "jevvify" / "skill").exists()
     assert main(["uninstall", "--skills-dir", str(tmp_path)]) == 0
     assert not folder.exists()
     assert main(["uninstall", "--skills-dir", str(tmp_path)]) == 0
@@ -29,7 +29,7 @@ def test_installed_skill_runs_without_the_package_on_path(tmp_path):
         encoding="utf-8",
     )
     out = subprocess.run(
-        [sys.executable, str(tmp_path / "jevify" / "jevify.py"), "run", str(project), "--dry-run", "--no-uv"],
+        [sys.executable, str(tmp_path / "jevvify" / "jevvify.py"), "run", str(project), "--dry-run", "--no-uv"],
         capture_output=True, text=True, cwd=tmp_path, env={"PATH": "", "SYSTEMROOT": "C:\\Windows"},
     )
     assert out.returncode == 0, out.stderr
@@ -38,7 +38,7 @@ def test_installed_skill_runs_without_the_package_on_path(tmp_path):
 
 def test_uninstall_keeps_folder_with_other_files(tmp_path):
     main(["install", "--skills-dir", str(tmp_path)])
-    (tmp_path / "jevify" / "notes.txt").write_text("mine")
+    (tmp_path / "jevvify" / "notes.txt").write_text("mine")
     main(["uninstall", "--skills-dir", str(tmp_path)])
-    assert (tmp_path / "jevify" / "notes.txt").exists()
-    assert not (tmp_path / "jevify" / "SKILL.md").exists()
+    assert (tmp_path / "jevvify" / "notes.txt").exists()
+    assert not (tmp_path / "jevvify" / "SKILL.md").exists()

@@ -2,7 +2,7 @@
 
 Each ``client.chat.completions.create(...)`` becomes::
 
-    _jevify_route("jev_ab12cd34", {"email": email}, lambda: client.chat.completions.create(...),
+    _jevvify_route("jev_ab12cd34", {"email": email}, lambda: client.chat.completions.create(...),
                   kind="choice", instructions="...", options=[...], shape="openai", threshold=0.85)
 
 The original call is kept verbatim inside the lambda, so the legacy path is byte-for-byte what
@@ -17,8 +17,8 @@ from pathlib import Path
 from .fsutil import RUNTIME_FILENAME
 from .models import Candidate
 
-IMPORT_NAME = "_jevify_route"
-RUNTIME_SOURCE = Path(__file__).parent / "runtime_src" / "jevify_rt.py"
+IMPORT_NAME = "_jevvify_route"
+RUNTIME_SOURCE = Path(__file__).parent / "runtime_src" / "jevvify_rt.py"
 
 
 def runtime_import_line(directory_is_package: bool) -> str:
@@ -96,5 +96,5 @@ def translate_source(source: str, candidates: list[Candidate], threshold: float,
         at = _import_insert_line(ast.parse(out))
         lines.insert(at, line)
         out = "\n".join(lines)
-    compile(out, "<jevify>", "exec")
+    compile(out, "<jevvify>", "exec")
     return out

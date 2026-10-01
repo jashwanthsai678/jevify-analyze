@@ -60,7 +60,7 @@ def render_report(
     eco = project_economics(len(promoted), evals, assumptions)
     verified = sum(1 for c in promoted if evals.get(c.id) and evals[c.id].status == "pass")
     lines = [
-        "# jevify report", "",
+        "# jevvify report", "",
         f"- LLM call sites found: **{len(candidates)}**",
         f"- Judgment tasks (refactor candidates): **{len(judged)}**",
         f"- Refactored to Jev with LLM fallback: **{len(promoted)}**"
@@ -103,7 +103,7 @@ def render_report(
         lines += ["## Notes", ""] + [f"- {n}" for n in notes] + [""]
     if written:
         lines += ["## Files written", ""] + [f"- {w}" for w in written] + [
-            "", "Originals are saved in `.jevify/backup/`. "
-            "Set `JEVIFY_MODE=off` to force the legacy path at runtime.", ""]
+            "", "Originals are saved in `.jevvify/backup/`. "
+            "Set `JEVVIFY_MODE=off` to force the legacy path at runtime.", ""]
     return "\n".join(lines)
 

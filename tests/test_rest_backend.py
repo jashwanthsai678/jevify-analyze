@@ -4,7 +4,7 @@ import urllib.error
 
 import pytest
 
-from jevify.runtime_loader import load_runtime
+from jevvify.runtime_loader import load_runtime
 
 
 class FakeResponse(io.BytesIO):

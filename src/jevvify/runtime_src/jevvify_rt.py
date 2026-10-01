@@ -1,4 +1,4 @@
-"""jevify runtime, copied next to refactored files as ``_jevify_rt.py``.
+"""jevvify runtime, copied next to refactored files as ``_jevvify_rt.py``.
 
 ``route`` asks TypeSafe Jev first and only calls the original LLM (``fallback``) when Jev is
 unavailable, errors, or is less confident than the threshold. Standard library only; the
@@ -9,10 +9,10 @@ typesafe/jev-1.13); otherwise the ``typesafe-sdk`` package is used.
 
 Environment:
   OPENROUTER_API_KEY  selects the REST backend
-  JEVIFY_MODEL / JEVIFY_ENDPOINT / JEVIFY_TIMEOUT  REST overrides (timeout default 10s)
-  JEVIFY_MODE       live (default) | shadow (run both, return legacy, log) | off (legacy only)
-  JEVIFY_THRESHOLD  overrides the generated threshold
-  JEVIFY_LOG        shadow log path (default ./.jevify_shadow.jsonl)
+  JEVVIFY_MODEL / JEVVIFY_ENDPOINT / JEVVIFY_TIMEOUT  REST overrides (timeout default 10s)
+  JEVVIFY_MODE       live (default) | shadow (run both, return legacy, log) | off (legacy only)
+  JEVVIFY_THRESHOLD  overrides the generated threshold
+  JEVVIFY_LOG        shadow log path (default ./.jevvify_shadow.jsonl)
 """
 
 from __future__ import annotations
@@ -65,17 +65,17 @@ def _ask_rest(kind: str, instructions: str, options: list[str], state: dict) -> 
         question = {"type": "noul", "instructions": instructions,
                     "criteria": {"true": options[0], "false": options[1]}}
     body = json.dumps({
-        "model": os.environ.get("JEVIFY_MODEL", "typesafe/jev-1.13"),
+        "model": os.environ.get("JEVVIFY_MODEL", "typesafe/jev-1.13"),
         "state": _state_text(state),
         "questions": {"q": question},
     }).encode("utf-8")
     req = urllib.request.Request(
-        os.environ.get("JEVIFY_ENDPOINT", "https://openrouter.ai/api/alpha/decisions"),
+        os.environ.get("JEVVIFY_ENDPOINT", "https://openrouter.ai/api/alpha/decisions"),
         data=body, method="POST",
         headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}",
                  "Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=float(os.environ.get("JEVIFY_TIMEOUT", "10"))) as resp:
+    with urllib.request.urlopen(req, timeout=float(os.environ.get("JEVVIFY_TIMEOUT", "10"))) as resp:
         ans = json.loads(resp.read().decode("utf-8"))["answers"]["q"]
     if kind == "choice":
         label = ans["choice"]
@@ -129,21 +129,21 @@ def _shim(shape: str, text: str) -> Any:
         msg = ns(role="assistant", content=text, tool_calls=None, refusal=None)
         return ns(
             choices=[ns(index=0, message=msg, finish_reason="stop")], model="jev",
-            output_text=text, usage=None, _jevify=True,
+            output_text=text, usage=None, _jevvify=True,
         )
     if shape == "anthropic":
         return ns(
             content=[ns(type="text", text=text)], role="assistant", stop_reason="end_turn",
-            model="jev", usage=None, _jevify=True,
+            model="jev", usage=None, _jevvify=True,
         )
     if shape == "google":
-        return ns(text=text, candidates=[], _jevify=True)
+        return ns(text=text, candidates=[], _jevvify=True)
     try:
         from langchain_core.messages import AIMessage
 
         return AIMessage(content=text)
     except Exception:
-        return ns(content=text, type="ai", _jevify=True)
+        return ns(content=text, type="ai", _jevvify=True)
 
 
 def _extract_text(resp: Any) -> str | None:
@@ -166,7 +166,7 @@ def _extract_text(resp: Any) -> str | None:
 
 
 def _log(record: dict) -> None:
-    path = os.environ.get("JEVIFY_LOG", ".jevify_shadow.jsonl")
+    path = os.environ.get("JEVVIFY_LOG", ".jevvify_shadow.jsonl")
     try:
         with _lock, open(path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(record) + "\n")
@@ -187,10 +187,10 @@ def route(
     json_mode: bool = False,
     json_key: str | None = None,
 ) -> Any:
-    mode = os.environ.get("JEVIFY_MODE", "live")
+    mode = os.environ.get("JEVVIFY_MODE", "live")
     if mode == "off":
         return fallback()
-    thr = float(os.environ.get("JEVIFY_THRESHOLD", threshold))
+    thr = float(os.environ.get("JEVVIFY_THRESHOLD", threshold))
     label: str | None = None
     conf = 0.0
     error: str | None = None

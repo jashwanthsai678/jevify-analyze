@@ -11,19 +11,19 @@ from pathlib import Path
 from .fsutil import EXCLUDED_DIRS, RUNTIME_FILENAME
 from .translator import RUNTIME_SOURCE
 
-MARKER = ".jevify-sandbox"
+MARKER = ".jevvify-sandbox"
 SDK_PACKAGE = "typesafe-sdk"
 
 
 def create_sandbox(project: Path, sandbox_dir: Path | None) -> Path:
     project = Path(project).resolve()
     if sandbox_dir is None:
-        sandbox = Path(tempfile.mkdtemp(prefix="jevify-"))
+        sandbox = Path(tempfile.mkdtemp(prefix="jevvify-"))
     else:
         sandbox = Path(sandbox_dir).resolve()
         if sandbox.exists() and any(sandbox.iterdir()):
             if not (sandbox / MARKER).exists():
-                raise SystemExit(f"refusing to reuse non-empty directory that is not a jevify sandbox: {sandbox}")
+                raise SystemExit(f"refusing to reuse non-empty directory that is not a jevvify sandbox: {sandbox}")
             shutil.rmtree(sandbox)
         sandbox.mkdir(parents=True, exist_ok=True)
 
@@ -33,7 +33,7 @@ def create_sandbox(project: Path, sandbox_dir: Path | None) -> Path:
         return skipped
 
     shutil.copytree(project, sandbox, ignore=ignore, dirs_exist_ok=True)
-    (sandbox / MARKER).write_text("created by jevify; safe to delete\n", encoding="utf-8")
+    (sandbox / MARKER).write_text("created by jevvify; safe to delete\n", encoding="utf-8")
     return sandbox
 
 
@@ -82,9 +82,9 @@ def _edit_pyproject(path: Path, text: str) -> str:
 
 def merge_back(project: Path, sandbox: Path, changed: list[str], runtime_dirs: set[str],
                dependency_files: list[str]) -> list[str]:
-    """Copy verified files into the project; originals are saved under .jevify/backup/."""
+    """Copy verified files into the project; originals are saved under .jevvify/backup/."""
     project, sandbox = Path(project).resolve(), Path(sandbox).resolve()
-    backup = project / ".jevify" / "backup"
+    backup = project / ".jevvify" / "backup"
     written: list[str] = []
     for rel in [*changed, *dependency_files]:
         src, dst = sandbox / rel, project / rel

@@ -1,8 +1,8 @@
 import json
 import textwrap
 
-from jevify.cli import main
-from jevify.pipeline import Options, run
+from jevvify.cli import main
+from jevvify.pipeline import Options, run
 
 APP = textwrap.dedent('''
     from openai import OpenAI
@@ -35,7 +35,7 @@ def test_dry_run_changes_nothing(tmp_path):
     res = run(Options(project=proj, dry_run=True, use_uv=False))
     assert len(res.promoted) == 1 and res.written == []
     assert (proj / "pkg" / "app.py").read_text() == APP
-    assert not (proj / "pkg" / "_jevify_rt.py").exists()
+    assert not (proj / "pkg" / "_jevvify_rt.py").exists()
     assert "nothing written" in res.report
 
 
@@ -43,10 +43,10 @@ def test_run_promotes_and_backs_up(tmp_path):
     proj = make_project(tmp_path)
     res = run(Options(project=proj, use_uv=False))
     app = (proj / "pkg" / "app.py").read_text()
-    assert "from ._jevify_rt import route as _jevify_route" in app and "Write an essay" in app
-    assert (proj / "pkg" / "_jevify_rt.py").exists()
+    assert "from ._jevvify_rt import route as _jevvify_route" in app and "Write an essay" in app
+    assert (proj / "pkg" / "_jevvify_rt.py").exists()
     assert '"typesafe-sdk"' in (proj / "pyproject.toml").read_text()
-    assert (proj / ".jevify" / "backup" / "pkg" / "app.py").read_text() == APP
+    assert (proj / ".jevvify" / "backup" / "pkg" / "app.py").read_text() == APP
     assert "Refactored to Jev with LLM fallback: **1**" in res.report
     assert "Skipped" in res.report and "generative" in res.report
     assert "estimates, not measurements" in res.report
@@ -104,5 +104,5 @@ def test_cli_analyze_and_run(tmp_path, capsys):
     assert main(["analyze", str(proj)]) == 0
     assert "CANDIDATE pkg/app.py" in capsys.readouterr().out
     assert main(["run", str(proj), "--dry-run", "--no-uv", "--threshold", "0.9"]) == 0
-    assert "# jevify report" in capsys.readouterr().out
+    assert "# jevvify report" in capsys.readouterr().out
     assert main(["run", str(proj), "--threshold", "2"]) == 2

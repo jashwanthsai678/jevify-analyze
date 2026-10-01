@@ -11,6 +11,6 @@ body:
   - type: textarea
     id: example
     attributes:
-      label: An example call site jevify should handle
+      label: An example call site jevvify should handle
       description: The code as written today, and what you would want it to become.
       render: python

@@ -5,10 +5,10 @@ import sys
 import textwrap
 from types import SimpleNamespace as NS
 
-from jevify.analyzer import analyze_source
-from jevify.fsutil import RUNTIME_FILENAME
-from jevify.sandbox import install_runtime
-from jevify.translator import translate_source
+from jevvify.analyzer import analyze_source
+from jevvify.fsutil import RUNTIME_FILENAME
+from jevvify.sandbox import install_runtime
+from jevvify.translator import translate_source
 
 SRC = textwrap.dedent('''
     """Module doc."""
@@ -41,20 +41,20 @@ def test_output_compiles_and_keeps_surroundings():
     out = rewrite()
     ast.parse(out)
     assert "# keep this comment" in out
-    assert out.index("from __future__") < out.index("from _jevify_rt import route as _jevify_route")
-    assert out.index("import os") < out.index("from _jevify_rt")
-    assert "Write an essay about a flower" in out and out.count("_jevify_route(") == 1
+    assert out.index("from __future__") < out.index("from _jevvify_rt import route as _jevvify_route")
+    assert out.index("import os") < out.index("from _jevvify_rt")
+    assert "Write an essay about a flower" in out and out.count("_jevvify_route(") == 1
 
 
 def test_original_call_is_preserved_inside_lambda():
     out = rewrite()
     assert 'lambda: client.chat.completions.create(\n        model="gpt-4o"' in out
-    assert "    return _jevify_route(\n        'jev_" in out and "\n    )\n" in out
+    assert "    return _jevvify_route(\n        'jev_" in out and "\n    )\n" in out
 
 
 def test_package_directories_use_relative_import():
     out = translate_source(SRC, analyze_source(SRC, "m.py"), 0.9, directory_is_package=True)
-    assert "from ._jevify_rt import route as _jevify_route" in out
+    assert "from ._jevvify_rt import route as _jevvify_route" in out
     assert "threshold=0.9" in out
 
 
@@ -77,7 +77,7 @@ def test_non_ascii_source_offsets():
     ''')
     out = rewrite(src)
     ast.parse(out)
-    assert 'label = "café ✓"; return _jevify_route(' in out
+    assert 'label = "café ✓"; return _jevvify_route(' in out
 
 
 # -- behaviour of the rewritten code, executed against a fake SDK -----------------
@@ -86,7 +86,7 @@ def load_rewritten(tmp_path, monkeypatch):
     (tmp_path / "m.py").write_text(rewrite(), encoding="utf-8")
     install_runtime(tmp_path)
     monkeypatch.syspath_prepend(str(tmp_path))
-    for name in ("m", "_jevify_rt"):
+    for name in ("m", "_jevvify_rt"):
         sys.modules.pop(name, None)
     spec = importlib.util.spec_from_file_location("m", tmp_path / "m.py")
     mod = importlib.util.module_from_spec(spec)
@@ -145,10 +145,10 @@ def test_env_threshold_and_off_switch(tmp_path, monkeypatch, fake_jev):
     mod.client = StubClient()
     fake_jev.reply = {"label": "ham", "confidence": 0.90, "p": 0}
     assert mod.triage("x").choices[0].message.content == "ham"
-    monkeypatch.setenv("JEVIFY_THRESHOLD", "0.95")
+    monkeypatch.setenv("JEVVIFY_THRESHOLD", "0.95")
     assert mod.triage("x").choices[0].message.content == "LEGACY"
-    monkeypatch.delenv("JEVIFY_THRESHOLD")
-    monkeypatch.setenv("JEVIFY_MODE", "off")
+    monkeypatch.delenv("JEVVIFY_THRESHOLD")
+    monkeypatch.setenv("JEVVIFY_MODE", "off")
     assert mod.triage("x").choices[0].message.content == "LEGACY"
 
 
@@ -156,8 +156,8 @@ def test_shadow_mode_returns_legacy_and_logs(tmp_path, monkeypatch, fake_jev):
     mod = load_rewritten(tmp_path, monkeypatch)
     mod.client = StubClient()
     log = tmp_path / "shadow.jsonl"
-    monkeypatch.setenv("JEVIFY_MODE", "shadow")
-    monkeypatch.setenv("JEVIFY_LOG", str(log))
+    monkeypatch.setenv("JEVVIFY_MODE", "shadow")
+    monkeypatch.setenv("JEVVIFY_LOG", str(log))
     assert mod.triage("x").choices[0].message.content == "LEGACY"
     rec = json.loads(log.read_text().splitlines()[0])
     assert rec["jev_label"] == "spam" and rec["legacy_text"] == "LEGACY" and rec["id"].startswith("jev_")
