@@ -36,7 +36,28 @@ Or without installing anything permanently: `uvx --from git+https://github.com/j
 Requires Python 3.11+. The command and the Python package are both named `jevvify`. Note the spelling: the similar
 name `jevify` on PyPI is an unrelated project. A PyPI release of `jevvify` is planned but not published yet.
 
-## Quick start
+## Just want the skill? (one file, no install)
+
+[`skills/jevvify-lite/SKILL.md`](skills/jevvify-lite/SKILL.md) is a standalone Claude Code skill. It contains only
+instructions, so Claude does the work itself: it finds the calls, judges them, and writes Jev-first rewrites with a
+fallback. It works in any language and needs no Python or tool install.
+
+```bash
+# for yourself
+mkdir -p ~/.claude/skills/jevvify-lite && curl -fsSL -o ~/.claude/skills/jevvify-lite/SKILL.md \
+  https://raw.githubusercontent.com/jashwanthsai678/jevify-analyze/main/skills/jevvify-lite/SKILL.md
+# for your whole team: commit it to your project as .claude/skills/jevvify-lite/SKILL.md
+```
+
+Then run `/jevvify-lite` in Claude Code.
+
+| | `jevvify-lite` skill | `jevvify` tool + skill |
+|---|---|---|
+| Install | Copy one file | `uv tool install` + `jevvify install` |
+| Languages | Any | Rewrites Python only |
+| Rewrites | Written by Claude, reviewed as a normal diff | Generated mechanically, with sandbox, compile check and evidence gate |
+
+## Quick start (the tool)
 
 ```bash
 jevvify analyze .                  # which calls would be touched, and why others are skipped

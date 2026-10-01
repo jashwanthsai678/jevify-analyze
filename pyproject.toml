@@ -38,7 +38,7 @@ build-backend = "hatchling.build"
 packages = ["src/jevvify"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md"]
+include = ["src", "skills", "tests", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
