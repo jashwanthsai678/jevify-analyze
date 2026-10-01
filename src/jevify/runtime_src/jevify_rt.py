@@ -4,7 +4,12 @@
 unavailable, errors, or is less confident than the threshold. Standard library only; the
 ``typesafe_sdk`` import is lazy so the legacy path never depends on it.
 
+Backends: with OPENROUTER_API_KEY set, Jev is called over REST (POST /api/alpha/decisions, model
+typesafe/jev-1.13); otherwise the ``typesafe-sdk`` package is used.
+
 Environment:
+  OPENROUTER_API_KEY  selects the REST backend
+  JEVIFY_MODEL / JEVIFY_ENDPOINT / JEVIFY_TIMEOUT  REST overrides (timeout default 10s)
   JEVIFY_MODE       live (default) | shadow (run both, return legacy, log) | off (legacy only)
   JEVIFY_THRESHOLD  overrides the generated threshold
   JEVIFY_LOG        shadow log path (default ./.jevify_shadow.jsonl)
@@ -45,8 +50,49 @@ def _answer(response: Any, key: str) -> Any:
     raise LookupError(f"no answer {key!r} in Jev response")
 
 
+def _state_text(state: dict) -> str:
+    """Jev's `state` is one string; label each input so instructions can refer to it by name."""
+    return "\n".join(f"{k}: {v}" for k, v in state.items())
+
+
+def _ask_rest(kind: str, instructions: str, options: list[str], state: dict) -> tuple[str, float]:
+    """POST /api/alpha/decisions (OpenRouter). Standard library only; no SDK needed."""
+    import urllib.request
+
+    if kind == "choice":
+        question = {"type": "choice", "instructions": instructions, "criteria": {o: o for o in options}}
+    else:
+        question = {"type": "noul", "instructions": instructions,
+                    "criteria": {"true": options[0], "false": options[1]}}
+    body = json.dumps({
+        "model": os.environ.get("JEVIFY_MODEL", "typesafe/jev-1.13"),
+        "state": _state_text(state),
+        "questions": {"q": question},
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        os.environ.get("JEVIFY_ENDPOINT", "https://openrouter.ai/api/alpha/decisions"),
+        data=body, method="POST",
+        headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}",
+                 "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=float(os.environ.get("JEVIFY_TIMEOUT", "10"))) as resp:
+        ans = json.loads(resp.read().decode("utf-8"))["answers"]["q"]
+    if kind == "choice":
+        label = ans["choice"]
+        probs = ans.get("probabilities") or {}
+        conf = probs.get(label, ans.get("confidence", max(probs.values()) if probs else 0.0))
+        return str(label), float(conf)
+    p = float(ans["noul"])  # probability of "true"
+    return (options[0] if p >= 0.5 else options[1]), max(p, 1.0 - p)
+
+
 def ask_jev(kind: str, instructions: str, options: list[str], state: dict) -> tuple[str, float]:
-    """Return (label, confidence in [0, 1]). Raises on any failure."""
+    """Return (label, confidence in [0, 1]). Raises on any failure.
+
+    Uses the REST endpoint when OPENROUTER_API_KEY is set, otherwise the typesafe-sdk package.
+    """
+    if os.environ.get("OPENROUTER_API_KEY"):
+        return _ask_rest(kind, instructions, options, state)
     from typesafe_sdk import Choice, Noul
 
     state = {k: v if isinstance(v, str) else str(v) for k, v in state.items()}

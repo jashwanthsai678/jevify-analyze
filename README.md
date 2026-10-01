@@ -70,10 +70,17 @@ In Claude Code, run `/jevify` and it walks the same steps and asks before it wri
 | Source | How |
 |---|---|
 | Your tests | `--test-cmd "pytest -q"` runs in the sandbox in shadow mode; every rewritten call logs both answers. |
-| Recorded samples | `--samples file.jsonl`, one `{"candidate": "...", "state": {...}, "legacy": "...", "expected": "..."}` per line. Jev is called live (`TYPESAFE_API_KEY`). |
+| Recorded samples | `--samples file.jsonl`, one `{"candidate": "...", "state": {...}, "legacy": "...", "expected": "..."}` per line. Jev is called live (see Credentials). |
 
 Call sites above `--max-error-rate` (default 5%) are blocked. Sites with no evidence are promoted but labelled
 `unverified` in the report; add `--require-evidence` to block them instead.
+
+### Credentials
+
+Rewritten code calls Jev over its REST endpoint (`POST https://openrouter.ai/api/alpha/decisions`, model
+`typesafe/jev-1.13`) when `OPENROUTER_API_KEY` is set. This uses only the standard library. Alternatively set
+`TYPESAFE_API_KEY` and install `typesafe-sdk`. With neither, every call falls back to your original LLM call.
+The [skill](src/jevify/skill/SKILL.md) also includes copy-paste Jev call templates for Python, TypeScript, `fetch` and `curl`.
 
 ### What the report tells you, and what it doesn't
 
