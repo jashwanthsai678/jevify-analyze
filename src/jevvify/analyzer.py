@@ -145,6 +145,32 @@ class _PromptCollector:
             if best is not None:
                 return best.value
         return None
+    def _literal_string(self, node: ast.AST | None) -> str | None:
+        """Resolve a node to inlined literal text if it's a static string or a
+        collection of string literals. Return None to keep it dynamic."""
+        if node is None:
+            return None
+        if isinstance(node, ast.Name):
+            node = self._resolve(node.id)
+            if node is None:
+                return None
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+            parts: list[str] = []
+            for e in node.elts:
+                if isinstance(e, ast.Constant) and isinstance(e.value, str):
+                    parts.append(e.value)
+                elif isinstance(e, ast.Name):
+                    resolved = self._resolve(e.id)
+                    if isinstance(resolved, ast.Constant) and isinstance(resolved.value, str):
+                        parts.append(resolved.value)
+                    else:
+                        return None
+                else:
+                    return None
+            return ", ".join(parts) if parts else None
+        return None    
 
     # -- main walk
     def add(self, node: ast.AST, depth: int = 0) -> None:
@@ -160,8 +186,12 @@ class _PromptCollector:
                 if isinstance(v, ast.Constant):
                     text += str(v.value)
                 elif isinstance(v, ast.FormattedValue):
-                    text += f"`{self._key_for(v.value)}`"
-            self.parts.append(text)
+                    literal = self._literal_string(v.value)
+                    if literal is not None:
+                        text += literal
+                    else:
+                        text += f"`{self._key_for(v.value)}`"
+            self.parts.append(text)        
         elif isinstance(node, ast.Name):
             target = self._resolve(node.id)
             if target is not None:
@@ -222,8 +252,12 @@ class _PromptCollector:
                 expr = pos[int(head)] if int(head) < len(pos) else None
             else:
                 expr = kw.get(head)
-            key = self._key_for(expr) if expr is not None else head or "value"
-            text += f"`{key}`"
+            literal = self._literal_string(expr)
+            if literal is not None:
+                text += literal
+            else:
+                key = self._key_for(expr) if expr is not None else head or "value"
+                text += f"`{key}`"            
         self.parts.append(text)
 
 

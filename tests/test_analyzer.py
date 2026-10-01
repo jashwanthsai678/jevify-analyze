@@ -131,3 +131,41 @@ def test_extract_options_variants():
 def test_negated_explanation_is_not_generative():
     kind, options, _ = classify_prompt("Classify as safe or unsafe. Do not explain.")
     assert kind == "choice" and options == ["safe", "unsafe"]
+
+def test_option_list_in_variable_fstring():
+    [c] = analyze('''
+        import openai
+        CATEGORIES = ["billing", "support", "refund"]
+        def f(client, text):
+            return client.chat.completions.create(model="m",
+                messages=[{"role": "user", "content": f"Classify the ticket. Possible categories: {CATEGORIES}. Ticket: {text}"}])
+    ''')
+    assert c.status == "candidate"
+    assert c.options == ["billing", "support", "refund"]
+    assert c.variables == {"text": "text"}
+
+
+def test_option_list_in_variable_format():
+    [c] = analyze('''
+        import openai
+        CATEGORIES = ("billing", "support", "refund")
+        def f(client, text):
+            return client.chat.completions.create(model="m",
+                messages=[{"role": "user", "content": "Classify the ticket. Possible categories: {cats}. Ticket: {text}".format(cats=CATEGORIES, text=text)}])
+    ''')
+    assert c.status == "candidate"
+    assert c.options == ["billing", "support", "refund"]
+    assert c.variables == {"text": "text"}
+
+
+def test_string_variable_in_fstring():
+    [c] = analyze('''
+        import openai
+        CATEGORIES = "billing, support, refund"
+        def f(client, text):
+            return client.chat.completions.create(model="m",
+                messages=[{"role": "user", "content": f"Classify as {CATEGORIES}: {text}"}])
+    ''')
+    assert c.status == "candidate"
+    assert c.options == ["billing", "support", "refund"]
+    assert c.variables == {"text": "text"}
