@@ -12,7 +12,7 @@ from pathlib import Path
 from . import __version__
 
 PACKAGE_DIR = Path(__file__).parent
-SKILL_SOURCE = PACKAGE_DIR / "skill" / "SKILL.md"
+SKILL_DIR = PACKAGE_DIR / "skill"  # SKILL.md plus reference/ files Claude reads on demand
 LAUNCHER = '''"""Launcher for the bundled jevvify copy. Usage: python jevvify.py analyze|run|... <args>"""
 import sys
 from pathlib import Path
@@ -24,7 +24,7 @@ from jevvify.cli import main  # noqa: E402
 if __name__ == "__main__":
     sys.exit(main())
 '''
-_OWNED = ("SKILL.md", "jevvify.py", ".jevvify_version", "lib")
+_OWNED = ("SKILL.md", "reference", "jevvify.py", ".jevvify_version", "lib")
 
 
 def default_skills_dir() -> Path:
@@ -34,13 +34,14 @@ def default_skills_dir() -> Path:
 def install_skill(skills_dir: Path | None = None) -> Path:
     folder = (skills_dir or default_skills_dir()) / "jevvify"
     folder.mkdir(parents=True, exist_ok=True)
-    lib = folder / "lib"
-    if lib.exists():
-        shutil.rmtree(lib)  # only ever our own previous copy
-    shutil.copytree(PACKAGE_DIR, lib / "jevvify", ignore=shutil.ignore_patterns("__pycache__", "skill", "*.pyc"))
+    for name in ("lib", "reference"):
+        if (folder / name).exists():
+            shutil.rmtree(folder / name)  # only ever our own previous copy
+    shutil.copytree(PACKAGE_DIR, folder / "lib" / "jevvify",
+                    ignore=shutil.ignore_patterns("__pycache__", "skill", "*.pyc"))
+    shutil.copytree(SKILL_DIR, folder, ignore=shutil.ignore_patterns("__pycache__"), dirs_exist_ok=True)
     (folder / "jevvify.py").write_text(LAUNCHER, encoding="utf-8")
     (folder / ".jevvify_version").write_text(__version__, encoding="utf-8")
-    shutil.copyfile(SKILL_SOURCE, folder / "SKILL.md")
     return folder / "SKILL.md"
 
 

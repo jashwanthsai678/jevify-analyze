@@ -1,5 +1,7 @@
+import re
 import subprocess
 import sys
+from pathlib import Path
 
 from jevvify.cli import main
 
@@ -12,10 +14,32 @@ def test_install_and_uninstall_skill(tmp_path, capsys):
     assert (folder / "lib" / "jevvify" / "cli.py").exists()
     assert (folder / "lib" / "jevvify" / "runtime_src" / "jevvify_rt.py").exists()
     assert not (folder / "lib" / "jevvify" / "skill").exists()
+    assert "typesafe/jev-1.13" in (folder / "reference" / "jev-api.md").read_text(encoding="utf-8")
     assert main(["uninstall", "--skills-dir", str(tmp_path)]) == 0
     assert not folder.exists()
     assert main(["uninstall", "--skills-dir", str(tmp_path)]) == 0
     assert "not installed" in capsys.readouterr().out
+
+
+def test_skill_only_references_files_that_ship_with_it(tmp_path):
+    main(["install", "--skills-dir", str(tmp_path)])
+    folder = tmp_path / "jevvify"
+    skill = (folder / "SKILL.md").read_text(encoding="utf-8")
+    refs = set(re.findall(r"`(reference/[\w./-]+)`", skill))
+    assert refs and all((folder / r).exists() for r in refs)
+    assert len(skill.splitlines()) < 200  # the long templates live in reference/, not in the always-loaded file
+
+
+def test_skill_mentions_only_real_cli_flags():
+    from jevvify.cli import _build_parser
+
+    run_parser = _build_parser()._subparsers._group_actions[0].choices["run"]
+    real = {opt for action in run_parser._actions for opt in action.option_strings}
+    text = (Path(__file__).parent.parent / "src" / "jevvify" / "skill" / "SKILL.md").read_text(encoding="utf-8")
+    # --apply is the skill's own argument, --python is uv's; the rest belong to `analyze` or the top-level parser
+    not_run_flags = {"--apply", "--python", "--version", "--json", "--help"}
+    mentioned = set(re.findall(r"(?<![\w-])(--[a-z][a-z-]+)", text)) - not_run_flags
+    assert mentioned and mentioned <= real, mentioned - real
 
 
 def test_installed_skill_runs_without_the_package_on_path(tmp_path):
